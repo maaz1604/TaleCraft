@@ -1,0 +1,8 @@
+fastapi[all]>=0.141.1
+langchain>=1.4.0
+langchain-google-genai>=4.4.0
+langchain-openai>=1.6.1
+psycopg2-binary>=2.9.12
+python-dotenv>=1.2.3
+sqlalchemy>=2.0.52
+uvicorn>=0.52.4
