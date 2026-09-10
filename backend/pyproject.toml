@@ -10,6 +10,7 @@ requires-python = ">=3.13"
 dependencies = [
     "fastapi[all]>=0.141.1",
     "langchain>=1.4.0",
+    "langchain-google-genai>=4.4.0",
     "langchain-openai>=1.6.1",
     "psycopg2-binary>=2.9.12",
     "python-dotenv>=1.2.3",
@@ -19,6 +20,9 @@ dependencies = [
 
 [project.scripts]
 backend = "backend:main"
+
+[tool.uv.build-backend]
+module-name = ["core", "db", "models", "routers", "schemas"]
 
 [build-system]
 requires = ["uv_build>=0.12.10,<0.13.0"]

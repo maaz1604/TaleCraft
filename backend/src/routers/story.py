@@ -1,5 +1,5 @@
 import uuid
-from typing import Optional,Annotated
+from typing import Optional,Annotated,cast
 from datetime import datetime
 from fastapi import APIRouter,FastAPI,Depends,HTTPException,Cookie,Response,BackgroundTasks
 from sqlalchemy.orm import Session
@@ -11,6 +11,7 @@ from schemas.story import (
     CompleteStoryNodeResponse,CompleteStoryResponse,CreateStoryRequest
 )
 from schemas.job import StoryJobResponse
+from core.story_generator import StoryGenerator
 
 
 router = APIRouter(
@@ -65,8 +66,8 @@ def generate_story_task(job_id: str, theme: str, session_id: str):
             setattr(job, "status", "processing")
             db.commit()
             
-            story = {}
-            setattr(job, "story_id", 1)
+            story = StoryGenerator.generate_story(db, session_id, theme)
+            job.story_id= story.id
             setattr(job,"status","completed")
             job.completed_at = datetime.now()  # type: ignore
             db.commit()
@@ -87,5 +88,29 @@ def get_complete_story(story_id: int, db: Annotated[Session,Depends(get_db)]):
     complete_story = build_complete_story_tree(db,story)
     return complete_story
 
-def build_complete_story_tree(db: Session, story: Story) -> CompleteStoryResponse: # type: ignore
-    pass
+def build_complete_story_tree(db: Session, story: Story) -> CompleteStoryResponse: 
+    nodes = db.query(StoryNode).filter(StoryNode.story_id == story.id).all()
+
+    node_dict = {}
+    for node in nodes:
+        node_response = CompleteStoryNodeResponse(
+            id=cast(int, node.id),
+            content=node.content, # type: ignore
+            is_ending=node.is_ending,# type: ignore
+            is_winning_ending=node.is_winning_ending,# type: ignore
+            options=node.options# type: ignore
+        )
+        node_dict[node.id] = node_response
+
+    root_node = next((node for node in nodes if cast(bool, node.is_root)), None) 
+    if not root_node:
+        raise HTTPException(status_code=500, detail="Story root node not found")
+
+    return CompleteStoryResponse(
+        id=story.id,# type: ignore
+        title= story.title,# type: ignore
+        session_id=story.session_id,# type: ignore
+        created_at=story.created_at,# type: ignore
+        root_node=node_dict[root_node.id],
+        all_nodes=node_dict
+    )
